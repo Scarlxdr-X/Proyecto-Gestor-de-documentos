@@ -1,17 +1,18 @@
 const express = require('express')
 const cors = require('cors')
 require('dotenv').config()
+const conexion = require('./db/conexion')
 
 const app = express()
-const PORT = 3000
+const PORT = process.env.PORT || 3000
 
 app.use(cors())
 app.use(express.json())
 
 app.get('/', (req, res) => {
-  res.json({ mensaje: 'Backend funcionando' })
+  res.json({ mensaje: 'Backend Gestor de Eventos funcionando' })
 })
 
 app.listen(PORT, () => {
-  console.log('Servidor corriendo en puerto 3000')
+  console.log(`Servidor corriendo en puerto ${PORT}`)
 })
