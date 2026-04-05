@@ -4,7 +4,7 @@
       <span class="logo">🎟️ Gestión de Eventos</span>
       <div class="nav-links">
         <router-link to="/">Inicio</router-link>
-        <router-link to="/login">Cerrar sesión</router-link>
+        <button @click="cerrarSesion" class="btn-logout">Cerrar sesión</button>
       </div>
     </nav>
     <div class="contenedor">
@@ -42,14 +42,21 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import api from '../api'
 import { formatearFecha, formatearPrecio } from '../utils/formato'
 
 const route = useRoute()
+const router = useRouter()
 const evento = ref(null)
 const cargando = ref(true)
 const error = ref('')
+
+const cerrarSesion = () => {
+  localStorage.removeItem('token')
+  localStorage.removeItem('usuario')
+  router.push('/login')
+}
 
 onMounted(async () => {
   try {
@@ -91,6 +98,7 @@ const comprar = () => {
 .nav-links {
   display: flex;
   gap: 1.5rem;
+  align-items: center;
 }
 
 .nav-links a {
@@ -100,6 +108,18 @@ const comprar = () => {
 }
 
 .nav-links a:hover {
+  color: #ffffff;
+}
+
+.btn-logout {
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.btn-logout:hover {
   color: #ffffff;
 }
 
