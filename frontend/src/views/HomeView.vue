@@ -1,28 +1,40 @@
 <template>
-  <div class="contenedor">
-    <h1 class="titulo">Eventos disponibles</h1>
-    <p v-if="cargando" class="estado">Cargando eventos...</p>
-    <p v-if="error" class="error">{{ error }}</p>
-    <div class="eventos-grid" v-if="!cargando && eventos.length > 0">
-      <div class="evento-card" v-for="evento in eventos" :key="evento.id">
-        <h2>{{ evento.nombre }}</h2>
-        <p class="descripcion">{{ evento.descripcion }}</p>
-        <div class="info">
-          <p><span>📅</span> {{ evento.fecha }}</p>
-          <p><span>📍</span> {{ evento.lugar }}</p>
-          <p><span>💰</span> ${{ evento.precio }}</p>
-          <p><span>🎟️</span> {{ evento.stock_disponible }} disponibles</p>
-        </div>
-        <router-link :to="`/eventos/${evento.id}`" class="btn">Ver detalle</router-link>
+  <div class="pagina">
+    <nav class="navbar">
+      <span class="logo">🎟️ Gestión de Eventos</span>
+      <div class="nav-links">
+        <router-link to="/">Inicio</router-link>
+        <router-link to="/login">Cerrar sesión</router-link>
       </div>
+    </nav>
+    <div class="contenedor">
+      <h1 class="titulo">Eventos disponibles</h1>
+      <p v-if="cargando" class="estado">Cargando eventos...</p>
+      <p v-if="error" class="error">{{ error }}</p>
+      <div class="eventos-grid" v-if="!cargando && eventos.length > 0">
+        <div class="evento-card" v-for="evento in eventos" :key="evento.id">
+          <div class="card-body">
+            <h2>{{ evento.nombre }}</h2>
+            <p class="descripcion">{{ evento.descripcion }}</p>
+            <div class="info">
+              <p>📅 {{ formatearFecha(evento.fecha) }}</p>
+              <p>📍 {{ evento.lugar }}</p>
+              <p>💰 {{ formatearPrecio(evento.precio) }}</p>
+              <p>🎟️ {{ evento.stock_disponible }} disponibles</p>
+            </div>
+          </div>
+          <router-link :to="`/eventos/${evento.id}`" class="btn">Ver detalle</router-link>
+        </div>
+      </div>
+      <p v-if="!cargando && eventos.length === 0" class="estado">No hay eventos disponibles</p>
     </div>
-    <p v-if="!cargando && eventos.length === 0" class="estado">No hay eventos disponibles</p>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '../api'
+import { formatearFecha, formatearPrecio } from '../utils/formato'
 
 const eventos = ref([])
 const cargando = ref(true)
@@ -41,25 +53,58 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.contenedor {
+.pagina {
   min-height: 100vh;
-  padding: 2rem;
   background-color: #0f0f0f;
+  color: #ffffff;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: #1a1a1a;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.logo {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.nav-links {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.nav-links a {
+  color: #888;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.nav-links a:hover {
+  color: #ffffff;
+}
+
+.contenedor {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .titulo {
   font-size: 2rem;
   margin-bottom: 2rem;
-  color: #ffffff;
   text-align: center;
 }
 
 .eventos-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1.5rem;
-  max-width: 1200px;
-  margin: 0 auto;
 }
 
 .evento-card {
@@ -67,7 +112,18 @@ onMounted(async () => {
   border: 1px solid #2a2a2a;
   border-radius: 16px;
   padding: 1.5rem;
-  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+  transition: border-color 0.2s;
+}
+
+.evento-card:hover {
+  border-color: #4f46e5;
+}
+
+.card-body {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -75,7 +131,6 @@ onMounted(async () => {
 
 .evento-card h2 {
   font-size: 1.2rem;
-  margin-bottom: 0.5rem;
 }
 
 .descripcion {
@@ -84,24 +139,24 @@ onMounted(async () => {
 }
 
 .info {
-  margin: 0.5rem 0;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.4rem;
   font-size: 0.9rem;
   color: #ccc;
+  margin-top: 0.5rem;
 }
 
 .btn {
-  display: inline-block;
-  margin-top: 1rem;
+  display: block;
   background: #4f46e5;
   color: white;
-  padding: 0.5rem 1rem;
+  padding: 0.6rem 1rem;
   border-radius: 8px;
   text-decoration: none;
   text-align: center;
   font-size: 0.9rem;
+  transition: background 0.2s;
 }
 
 .btn:hover {
