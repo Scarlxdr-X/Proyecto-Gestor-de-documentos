@@ -13,6 +13,9 @@
       <p v-if="error" class="error">{{ error }}</p>
       <div class="eventos-grid" v-if="!cargando && eventos.length > 0">
         <div class="evento-card" v-for="evento in eventos" :key="evento.id">
+          <div class="card-imagen">
+            <img :src="evento.imagen" :alt="evento.nombre" />
+          </div>
           <div class="card-body">
             <h2>{{ evento.nombre }}</h2>
             <p class="descripcion">{{ evento.descripcion }}</p>
@@ -65,6 +68,8 @@ onMounted(async () => {
   min-height: 100vh;
   background-color: #0f0f0f;
   color: #ffffff;
+  display: flex;
+  flex-direction: column;
 }
 
 .navbar {
@@ -114,6 +119,8 @@ onMounted(async () => {
   padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
+  flex: 1;
+  width: 100%;
 }
 
 .titulo {
@@ -124,7 +131,7 @@ onMounted(async () => {
 
 .eventos-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1.5rem;
 }
 
@@ -132,11 +139,9 @@ onMounted(async () => {
   background-color: #1a1a1a;
   border: 1px solid #2a2a2a;
   border-radius: 16px;
-  padding: 1.5rem;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 1rem;
   transition: border-color 0.2s;
 }
 
@@ -144,10 +149,29 @@ onMounted(async () => {
   border-color: #4f46e5;
 }
 
+.card-imagen {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+}
+
+.card-imagen img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.evento-card:hover .card-imagen img {
+  transform: scale(1.05);
+}
+
 .card-body {
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  flex: 1;
 }
 
 .evento-card h2 {
@@ -172,12 +196,13 @@ onMounted(async () => {
   display: block;
   background: #4f46e5;
   color: white;
-  padding: 0.6rem 1rem;
-  border-radius: 8px;
+  padding: 0.8rem 1rem;
   text-decoration: none;
   text-align: center;
   font-size: 0.9rem;
   transition: background 0.2s;
+  margin: 1rem 1.5rem 1.5rem;
+  border-radius: 8px;
 }
 
 .btn:hover {
