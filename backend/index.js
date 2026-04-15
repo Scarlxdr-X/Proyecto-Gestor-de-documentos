@@ -9,6 +9,9 @@ const eventosRoutes = require('./routes/eventos.routes')
 const app = express()
 const PORT = process.env.PORT || 3000
 
+const entradasRoutes = require('./routes/entradas.routes')
+app.use('/api/entradas', entradasRoutes)
+
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
