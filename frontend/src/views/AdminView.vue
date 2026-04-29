@@ -3,11 +3,12 @@
     <nav class="navbar">
       <router-link to="/" class="logo">🎟️ Gestión de Eventos</router-link>
       <div class="nav-links">
-        <router-link to="/">Inicio</router-link>
-        <router-link to="/perfil">Perfil</router-link>
-        <router-link v-if="esAdmin" to="/admin">Admin</router-link>
-        <button @click="cerrarSesion" class="btn-logout">Cerrar sesión</button>
-      </div>
+    <router-link to="/">Inicio</router-link>
+    <router-link to="/perfil">Perfil</router-link>
+    <router-link v-if="esAdmin" to="/admin">Admin</router-link>
+    <router-link v-if="esAdmin" to="/validar-qr">Validar QR</router-link>
+    <button @click="cerrarSesion" class="btn-logout">Cerrar sesión</button>
+</div>
     </nav>
 
     <div class="contenedor">

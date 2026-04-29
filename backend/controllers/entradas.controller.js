@@ -62,4 +62,24 @@ const getMisEntradas = (req, res) => {
   })
 }
 
-module.exports = { comprarEntrada, getMisEntradas }
+const validarQR = (req, res) => {
+  const { codigo_qr } = req.body
+
+  conexion.query('SELECT entradas.*, eventos.nombre as evento_nombre, eventos.fecha, eventos.lugar FROM entradas JOIN eventos ON entradas.evento_id = eventos.id WHERE entradas.codigo_qr = ?', [codigo_qr], (error, resultados) => {
+    if (error) return res.status(500).json({ mensaje: 'Error validando QR' })
+    if (resultados.length === 0) return res.status(404).json({ mensaje: 'QR no encontrado', valido: false })
+
+    const entrada = resultados[0]
+
+    if (entrada.estado === 'usada') {
+      return res.json({ mensaje: 'Esta entrada ya fue usada', valido: false, entrada })
+    }
+
+    conexion.query('UPDATE entradas SET estado = "usada" WHERE codigo_qr = ?', [codigo_qr], (errorUpdate) => {
+      if (errorUpdate) return res.status(500).json({ mensaje: 'Error actualizando entrada' })
+      res.json({ mensaje: 'Entrada valida', valido: true, entrada })
+    })
+  })
+}
+
+module.exports = { comprarEntrada, getMisEntradas, validarQR }

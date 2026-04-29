@@ -6,6 +6,7 @@ import EventosView from '../views/EventosView.vue'
 import DetalleEventoView from '../views/DetalleEventoView.vue'
 import PerfilView from '../views/PerfilView.vue'
 import AdminView from '../views/AdminView.vue'
+import ValidarQRView from '../views/ValidarQRView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -40,6 +41,11 @@ const router = createRouter({
     {
       path: '/admin',
       component: AdminView,
+      meta: { requiereAuth: true, requiereAdmin: true }
+    },
+    {
+      path: '/validar-qr',
+      component: ValidarQRView,
       meta: { requiereAuth: true, requiereAdmin: true }
     }
   ]
