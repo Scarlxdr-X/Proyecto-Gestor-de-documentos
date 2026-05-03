@@ -4,18 +4,66 @@
       <h1 class="titulo">Validar Entrada QR</h1>
 
       <div class="validar-card">
-        <p class="instruccion">Ingresa el codigo QR de la entrada para validarla</p>
-        <div class="input-grupo">
-          <input
-            v-model="codigoQR"
-            placeholder="ENTRADA-1-1-1234567890"
-            @keyup.enter="validar"
-          />
-          <button @click="validar" class="btn-validar" :disabled="validando || !codigoQR">
-            {{ validando ? 'Validando...' : 'Validar' }}
+        <div class="tabs">
+          <button @click="tab = 'codigo'" :class="{ activo: tab === 'codigo' }">Ingresar codigo</button>
+          <button @click="tab = 'imagen'" :class="{ activo: tab === 'imagen' }">Subir imagen QR</button>
+        </div>
+
+        <!-- Tab codigo -->
+        <div v-if="tab === 'codigo'">
+          <p class="instruccion">Ingresa el codigo QR de la entrada para validarla</p>
+          <div class="input-grupo">
+            <input
+              v-model="codigoQR"
+              placeholder="ENTRADA-1-1-1234567890"
+              @keyup.enter="validar"
+            />
+            <button @click="validar" class="btn-validar" :disabled="validando || !codigoQR">
+              {{ validando ? 'Validando...' : 'Validar' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Tab imagen -->
+        <div v-if="tab === 'imagen'">
+          <p class="instruccion">Sube una imagen del codigo QR para validarla</p>
+          <div
+            class="zona-subida"
+            @dragover.prevent
+            @drop.prevent="onDrop"
+            @click="$refs.inputImagen.click()"
+          >
+            <input
+              ref="inputImagen"
+              type="file"
+              accept="image/*"
+              style="display: none"
+              @change="onImagenSeleccionada"
+            />
+            <div v-if="!imagenPreview">
+              <p class="zona-icono">📁</p>
+              <p>Haz clic o arrastra una imagen aqui</p>
+              <p class="zona-subtitulo">PNG, JPG o WEBP</p>
+            </div>
+            <img v-if="imagenPreview" :src="imagenPreview" class="imagen-preview" />
+          </div>
+          <button
+            v-if="imagenPreview"
+            @click="leerQRImagen"
+            class="btn-validar"
+            :disabled="validando"
+          >
+            {{ validando ? 'Leyendo QR...' : 'Leer y Validar QR' }}
+          </button>
+          <button v-if="imagenPreview" @click="limpiarImagen" class="btn-limpiar">
+            Cambiar imagen
           </button>
         </div>
 
+        <!-- Canvas oculto para procesar imagen -->
+        <canvas ref="canvas" style="display: none"></canvas>
+
+        <!-- Resultado valido -->
         <div class="resultado valida" v-if="resultado && resultado.valido">
           <div class="resultado-icono">✅</div>
           <h2>Entrada Valida</h2>
@@ -27,6 +75,7 @@
           <p class="resultado-mensaje">La entrada ha sido marcada como usada</p>
         </div>
 
+        <!-- Resultado invalido -->
         <div class="resultado invalida" v-if="resultado && !resultado.valido">
           <div class="resultado-icono">❌</div>
           <h2>Entrada No Valida</h2>
@@ -37,6 +86,7 @@
           </div>
         </div>
 
+        <!-- Error -->
         <div class="resultado invalida" v-if="error">
           <div class="resultado-icono">⚠️</div>
           <h2>Error</h2>
@@ -44,6 +94,7 @@
         </div>
       </div>
 
+      <!-- Historial -->
       <div class="historial-card" v-if="historial.length > 0">
         <h2>Historial de esta sesion</h2>
         <div class="historial-lista">
@@ -61,16 +112,76 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
+import jsQR from 'jsqr'
 import api from '../api'
 import { formatearFecha } from '../utils/formato'
 import MainLayout from '../layouts/MainLayout.vue'
 
+const tab = ref('codigo')
 const codigoQR = ref('')
 const validando = ref(false)
 const resultado = ref(null)
 const error = ref('')
 const historial = ref([])
+const imagenPreview = ref(null)
+const imagenFile = ref(null)
+const canvas = ref(null)
+const inputImagen = ref(null)
+
+const limpiarResultado = () => {
+  resultado.value = null
+  error.value = ''
+}
+
+const limpiarImagen = () => {
+  imagenPreview.value = null
+  imagenFile.value = null
+  limpiarResultado()
+}
+
+const onImagenSeleccionada = (e) => {
+  const file = e.target.files[0]
+  if (!file) return
+  imagenFile.value = file
+  imagenPreview.value = URL.createObjectURL(file)
+  limpiarResultado()
+}
+
+const onDrop = (e) => {
+  const file = e.dataTransfer.files[0]
+  if (!file) return
+  imagenFile.value = file
+  imagenPreview.value = URL.createObjectURL(file)
+  limpiarResultado()
+}
+
+const leerQRImagen = () => {
+  if (!imagenFile.value) return
+  validando.value = true
+  error.value = ''
+  resultado.value = null
+
+  const img = new Image()
+  img.onload = () => {
+    const ctx = canvas.value.getContext('2d')
+    canvas.value.width = img.width
+    canvas.value.height = img.height
+    ctx.drawImage(img, 0, 0)
+    const imageData = ctx.getImageData(0, 0, img.width, img.height)
+    const code = jsQR(imageData.data, imageData.width, imageData.height)
+
+    if (!code) {
+      error.value = 'No se pudo leer el codigo QR de la imagen'
+      validando.value = false
+      return
+    }
+
+    codigoQR.value = code.data
+    validar()
+  }
+  img.src = imagenPreview.value
+}
 
 const validar = async () => {
   if (!codigoQR.value) return
@@ -127,6 +238,31 @@ const validar = async () => {
   gap: 1.5rem;
 }
 
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  background: #0f0f0f;
+  padding: 0.4rem;
+  border-radius: 10px;
+}
+
+.tabs button {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #888;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.tabs button.activo {
+  background: #4f46e5;
+  color: white;
+}
+
 .instruccion {
   color: #888;
   font-size: 0.9rem;
@@ -155,6 +291,43 @@ const validar = async () => {
   border-color: #4f46e5;
 }
 
+.zona-subida {
+  border: 2px dashed #2a2a2a;
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  color: #888;
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zona-subida:hover {
+  border-color: #4f46e5;
+}
+
+.zona-icono {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.zona-subtitulo {
+  font-size: 0.8rem;
+  color: #555;
+  margin-top: 0.3rem;
+}
+
+.imagen-preview {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
 .btn-validar {
   width: 100%;
   background: #4f46e5;
@@ -174,6 +347,23 @@ const validar = async () => {
 .btn-validar:disabled {
   background: #333;
   cursor: not-allowed;
+}
+
+.btn-limpiar {
+  width: 100%;
+  background: transparent;
+  color: #888;
+  border: 1px solid #2a2a2a;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.btn-limpiar:hover {
+  color: #ffffff;
+  border-color: #888;
 }
 
 .resultado {

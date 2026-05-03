@@ -27,6 +27,9 @@
             <div class="entrada-qr">
               <img :src="generarQRUrl(entrada.codigo_qr)" :alt="entrada.codigo_qr" />
               <p class="entrada-codigo">{{ entrada.codigo_qr }}</p>
+              <a :href="generarQRUrl(entrada.codigo_qr)" :download="`QR-${entrada.evento_nombre}.png`" target="_blank" class="btn-descargar">
+                ⬇️ Descargar QR
+              </a>
             </div>
           </div>
         </div>
@@ -213,6 +216,24 @@ onMounted(async () => {
   text-align: center;
   max-width: 120px;
   word-break: break-all;
+}
+
+.btn-descargar {
+  display: block;
+  background: #1a1a2e;
+  border: 1px solid #4f46e5;
+  color: #a5b4fc;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.8rem;
+  text-align: center;
+  transition: background 0.2s;
+}
+
+.btn-descargar:hover {
+  background: #4f46e5;
+  color: white;
 }
 
 .estado {
