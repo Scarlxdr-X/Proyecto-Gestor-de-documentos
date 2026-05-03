@@ -1,11 +1,11 @@
-const conexion = require('../db/conexion')
+const Entrada = require('../models/entrada.model')
+const Evento = require('../models/evento.model')
 const QRCode = require('qrcode')
 
 const comprarEntrada = (req, res) => {
   const { evento_id, usuario_id } = req.body
 
-  // Verificar stock disponible
-  conexion.query('SELECT * FROM eventos WHERE id = ?', [evento_id], (error, resultados) => {
+  Evento.getById(evento_id, (error, resultados) => {
     if (error) return res.status(500).json({ mensaje: 'Error verificando evento' })
     if (resultados.length === 0) return res.status(404).json({ mensaje: 'Evento no encontrado' })
 
@@ -14,19 +14,15 @@ const comprarEntrada = (req, res) => {
       return res.status(400).json({ mensaje: 'No hay entradas disponibles' })
     }
 
-    // Generar codigo QR unico
     const codigoQR = `ENTRADA-${evento_id}-${usuario_id}-${Date.now()}`
 
-    // Generar imagen QR en base64
     QRCode.toDataURL(codigoQR, (errorQR, urlQR) => {
       if (errorQR) return res.status(500).json({ mensaje: 'Error generando QR' })
 
-      // Insertar entrada en la base de datos
-      const sqlEntrada = 'INSERT INTO entradas (usuario_id, evento_id, codigo_qr, estado) VALUES (?, ?, ?, "valida")'
-      conexion.query(sqlEntrada, [usuario_id, evento_id, codigoQR], (errorInsert, resultado) => {
+      Entrada.create({ usuario_id, evento_id, codigo_qr: codigoQR }, (errorInsert, resultado) => {
         if (errorInsert) return res.status(500).json({ mensaje: 'Error registrando entrada' })
 
-        // Descontar stock
+        const conexion = require('../db/conexion')
         conexion.query('UPDATE eventos SET stock_disponible = stock_disponible - 1 WHERE id = ?', [evento_id], (errorStock) => {
           if (errorStock) return res.status(500).json({ mensaje: 'Error actualizando stock' })
 
@@ -48,15 +44,7 @@ const comprarEntrada = (req, res) => {
 }
 
 const getMisEntradas = (req, res) => {
-  const { usuario_id } = req.params
-  const sql = `
-    SELECT entradas.*, eventos.nombre as evento_nombre, eventos.fecha, eventos.lugar
-    FROM entradas
-    JOIN eventos ON entradas.evento_id = eventos.id
-    WHERE entradas.usuario_id = ?
-    ORDER BY entradas.fecha_compra DESC
-  `
-  conexion.query(sql, [usuario_id], (error, resultados) => {
+  Entrada.getByUsuario(req.params.usuario_id, (error, resultados) => {
     if (error) return res.status(500).json({ mensaje: 'Error obteniendo entradas' })
     res.json(resultados)
   })
@@ -65,7 +53,7 @@ const getMisEntradas = (req, res) => {
 const validarQR = (req, res) => {
   const { codigo_qr } = req.body
 
-  conexion.query('SELECT entradas.*, eventos.nombre as evento_nombre, eventos.fecha, eventos.lugar FROM entradas JOIN eventos ON entradas.evento_id = eventos.id WHERE entradas.codigo_qr = ?', [codigo_qr], (error, resultados) => {
+  Entrada.getByCodigoQR(codigo_qr, (error, resultados) => {
     if (error) return res.status(500).json({ mensaje: 'Error validando QR' })
     if (resultados.length === 0) return res.status(404).json({ mensaje: 'QR no encontrado', valido: false })
 
@@ -75,7 +63,7 @@ const validarQR = (req, res) => {
       return res.json({ mensaje: 'Esta entrada ya fue usada', valido: false, entrada })
     }
 
-    conexion.query('UPDATE entradas SET estado = "usada" WHERE codigo_qr = ?', [codigo_qr], (errorUpdate) => {
+    Entrada.marcarUsada(codigo_qr, (errorUpdate) => {
       if (errorUpdate) return res.status(500).json({ mensaje: 'Error actualizando entrada' })
       res.json({ mensaje: 'Entrada valida', valido: true, entrada })
     })
