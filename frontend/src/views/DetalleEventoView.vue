@@ -27,7 +27,7 @@
             </div>
           </div>
           <div class="acciones">
-            <button @click="abrirModal" class="btn-comprar" :disabled="evento.stock_disponible <= 0">
+            <button @click="abrirModalResumen" class="btn-comprar" :disabled="evento.stock_disponible <= 0">
               {{ evento.stock_disponible <= 0 ? 'Agotado' : 'Comprar entrada' }}
             </button>
             <router-link to="/" class="btn-volver">← Volver</router-link>
@@ -36,9 +36,10 @@
       </div>
     </div>
 
-    <div class="modal-overlay" v-if="mostrarModal" @click.self="cerrarModal">
+    <!-- Modal resumen -->
+    <div class="modal-overlay" v-if="mostrarResumen" @click.self="cerrarResumen">
       <div class="modal">
-        <h2>Confirmar compra</h2>
+        <h2>Resumen de compra</h2>
         <p class="modal-subtitulo">Estas a punto de comprar una entrada para:</p>
         <div class="modal-info" v-if="evento">
           <p><strong>{{ evento.nombre }}</strong></p>
@@ -47,17 +48,59 @@
           <p class="modal-precio">{{ formatearPrecio(evento.precio) }}</p>
         </div>
         <div class="modal-acciones">
-          <button @click="confirmarCompra" class="btn-confirmar" :disabled="comprando">
-            {{ comprando ? 'Procesando...' : 'Confirmar compra' }}
-          </button>
-          <button @click="cerrarModal" class="btn-cancelar">Cancelar</button>
+          <button @click="procederPago" class="btn-confirmar">Proceder al pago</button>
+          <button @click="cerrarResumen" class="btn-cancelar">Cancelar</button>
         </div>
       </div>
     </div>
 
+    <!-- Modal pago -->
+    <div class="modal-overlay" v-if="mostrarPago" @click.self="cerrarPago">
+      <div class="modal">
+        <h2>💳 Datos de pago</h2>
+        <p class="modal-subtitulo">Ingresa los datos de tu tarjeta</p>
+        <div class="formulario-pago">
+          <div class="campo">
+            <label>Nombre del titular</label>
+            <input v-model="pago.nombre" placeholder="Como aparece en la tarjeta" />
+          </div>
+          <div class="campo">
+            <label>Numero de tarjeta</label>
+            <input v-model="pago.numero" placeholder="0000 0000 0000 0000" maxlength="19" @input="formatearNumero" />
+          </div>
+          <div class="campo-fila">
+            <div class="campo">
+              <label>Fecha de vencimiento</label>
+              <input v-model="pago.vencimiento" placeholder="MM/AA" maxlength="5" @input="formatearVencimiento" />
+            </div>
+            <div class="campo">
+              <label>CVV</label>
+              <input v-model="pago.cvv" placeholder="000" maxlength="3" type="password" />
+            </div>
+          </div>
+          <p class="error-pago" v-if="errorPago">{{ errorPago }}</p>
+        </div>
+        <div class="modal-acciones">
+          <button @click="confirmarPago" class="btn-confirmar" :disabled="procesando">
+            {{ procesando ? 'Procesando...' : `Pagar ${formatearPrecio(evento?.precio)}` }}
+          </button>
+          <button @click="cerrarPago" class="btn-cancelar">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal procesando -->
+    <div class="modal-overlay" v-if="procesando">
+      <div class="modal modal-procesando">
+        <div class="spinner"></div>
+        <p>Procesando pago...</p>
+      </div>
+    </div>
+
+    <!-- Modal QR -->
     <div class="modal-overlay" v-if="entradaComprada" @click.self="cerrarQR">
       <div class="modal">
-        <h2>Compra exitosa 🎉</h2>
+        <h2>Pago exitoso 🎉</h2>
         <p class="modal-subtitulo">Guarda tu codigo QR para ingresar al evento</p>
         <div class="qr-contenedor">
           <img :src="entradaComprada.qr_imagen" alt="Codigo QR" class="qr-imagen" />
@@ -83,16 +126,67 @@ const route = useRoute()
 const evento = ref(null)
 const cargando = ref(true)
 const error = ref('')
-const mostrarModal = ref(false)
-const comprando = ref(false)
+const mostrarResumen = ref(false)
+const mostrarPago = ref(false)
+const procesando = ref(false)
 const entradaComprada = ref(null)
+const errorPago = ref('')
 
-const abrirModal = () => mostrarModal.value = true
-const cerrarModal = () => mostrarModal.value = false
+const pago = ref({
+  nombre: '',
+  numero: '',
+  vencimiento: '',
+  cvv: ''
+})
+
+const abrirModalResumen = () => mostrarResumen.value = true
+const cerrarResumen = () => mostrarResumen.value = false
 const cerrarQR = () => entradaComprada.value = null
 
-const confirmarCompra = async () => {
-  comprando.value = true
+const procederPago = () => {
+  mostrarResumen.value = false
+  mostrarPago.value = true
+}
+
+const cerrarPago = () => {
+  mostrarPago.value = false
+  pago.value = { nombre: '', numero: '', vencimiento: '', cvv: '' }
+  errorPago.value = ''
+}
+
+const formatearNumero = () => {
+  let val = pago.value.numero.replace(/\D/g, '')
+  val = val.match(/.{1,4}/g)?.join(' ') || val
+  pago.value.numero = val
+}
+
+const formatearVencimiento = () => {
+  let val = pago.value.vencimiento.replace(/\D/g, '')
+  if (val.length >= 2) val = val.slice(0, 2) + '/' + val.slice(2)
+  pago.value.vencimiento = val
+}
+
+const validarPago = () => {
+  if (!pago.value.nombre) return 'Ingresa el nombre del titular'
+  if (pago.value.numero.replace(/\s/g, '').length < 16) return 'Numero de tarjeta invalido'
+  if (pago.value.vencimiento.length < 5) return 'Fecha de vencimiento invalida'
+  if (pago.value.cvv.length < 3) return 'CVV invalido'
+  return ''
+}
+
+const confirmarPago = async () => {
+  const error = validarPago()
+  if (error) {
+    errorPago.value = error
+    return
+  }
+
+  mostrarPago.value = false
+  procesando.value = true
+
+  // Simular procesamiento de pago
+  await new Promise(resolve => setTimeout(resolve, 2000))
+
   try {
     const usuario = JSON.parse(localStorage.getItem('usuario'))
     const respuesta = await api.post('/api/entradas/comprar', {
@@ -100,12 +194,12 @@ const confirmarCompra = async () => {
       usuario_id: usuario.id
     })
     entradaComprada.value = respuesta.data.entrada
-    mostrarModal.value = false
     evento.value.stock_disponible--
   } catch (e) {
-    alert(e.response?.data?.mensaje || 'Error al comprar entrada')
+    alert(e.response?.data?.mensaje || 'Error al procesar el pago')
   } finally {
-    comprando.value = false
+    procesando.value = false
+    pago.value = { nombre: '', numero: '', vencimiento: '', cvv: '' }
   }
 }
 
@@ -233,6 +327,27 @@ h1 {
   width: 90%;
 }
 
+.modal-procesando {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 3rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #2a2a2a;
+  border-top-color: #4f46e5;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .modal h2 {
   font-size: 1.4rem;
   margin-bottom: 0.5rem;
@@ -261,6 +376,50 @@ h1 {
   font-weight: bold;
   color: #4f46e5;
   margin-top: 0.5rem;
+}
+
+.formulario-pago {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 1;
+}
+
+.campo label {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.campo input {
+  background: #0f0f0f;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 0.7rem 1rem;
+  color: #ffffff;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.campo input:focus {
+  border-color: #4f46e5;
+}
+
+.campo-fila {
+  display: flex;
+  gap: 1rem;
+}
+
+.error-pago {
+  color: #ff6b6b;
+  font-size: 0.85rem;
+  text-align: center;
 }
 
 .modal-acciones {
